@@ -6,13 +6,12 @@ import (
 
 	"github.com/ollelogdahl/concord"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // AssertConsistentRing verifies that all nodes form a consistent ring
 // where each node's successor has that node as predecessor
-func AssertConsistentRing(t require.TestingT, nodes []*concord.Concord) {
-	require.NotEmpty(t, nodes, "node list must not be empty")
+func AssertConsistentRing(t assert.TestingT, nodes []*concord.Concord) {
+	assert.NotEmpty(t, nodes, "node list must not be empty")
 
 	expectedSize := len(nodes)
 	idToNode := make(map[uint64]*concord.Concord)
@@ -36,15 +35,15 @@ func AssertConsistentRing(t require.TestingT, nodes []*concord.Concord) {
 		visitedIds[currentID] = true
 
 		successors := current.Successors()
-		require.NotEmpty(t, successors, "Node %d has no successors", currentID)
+		assert.NotEmpty(t, successors, "Node %d has no successors", currentID)
 
 		successor := successors[0]
 		next, ok := idToNode[successor.Id]
-		require.True(t, ok, "Successor %d is not a known node (from node %d)", successor.Id, currentID)
+		assert.True(t, ok, "Successor %d is not a known node (from node %d)", successor.Id, currentID)
 
 		// Check bidirectional consistency
 		pred := next.Predecessor()
-		require.NotNil(t, pred, "Node %d has null predecessor (successor of node %d)", successor.Id, currentID)
+		assert.NotNil(t, pred, "Node %d has null predecessor (successor of node %d)", successor.Id, currentID)
 		assert.Equal(t, currentID, pred.Id, "Inconsistent links: Node %d → successor %d, but successor's predecessor is %d",
 			currentID, successor.Id, pred.Id)
 
@@ -55,27 +54,27 @@ func AssertConsistentRing(t require.TestingT, nodes []*concord.Concord) {
 }
 
 // AssertConsistentLookupForKey verifies that all nodes return the same owner for a given key
-func AssertConsistentLookupForKey(t require.TestingT, ctx context.Context, nodes []*concord.Concord, key []byte) {
-	require.NotEmpty(t, nodes, "node list must not be empty")
+func AssertConsistentLookupForKey(t assert.TestingT, ctx context.Context, nodes []*concord.Concord, key []byte) {
+	assert.NotEmpty(t, nodes, "node list must not be empty")
 
 	expectedResult, err := nodes[0].Lookup(key)
-	require.NoError(t, err, "Lookup failed on starting node")
-	require.NotNil(t, expectedResult, "Lookup returned nil on starting node")
+	assert.NoError(t, err, "Lookup failed on starting node")
+	assert.NotNil(t, expectedResult, "Lookup returned nil on starting node")
 
 	for i := 1; i < len(nodes); i++ {
 		node := nodes[i]
 		actualResult, err := node.Lookup(key)
-		require.NoError(t, err, "Lookup failed on node %d", i)
-		require.NotNil(t, actualResult, "Node %d returned nil", i)
+		assert.NoError(t, err, "Lookup failed on node %d", i)
+		assert.NotNil(t, actualResult, "Node %d returned nil", i)
 		assert.Equal(t, expectedResult.Id, actualResult.Id,
 			"Node %d returned different server: expected %d, got %d", i, expectedResult.Id, actualResult.Id)
 	}
 }
 
 // AssertFullRangeCover verifies that all nodes' ranges cover the entire ring without gaps
-func AssertFullRangeCover(t require.TestingT, nodes []*concord.Concord) {
+func AssertFullRangeCover(t assert.TestingT, nodes []*concord.Concord) {
 
-	require.NotEmpty(t, nodes, "node list must not be empty")
+	assert.NotEmpty(t, nodes, "node list must not be empty")
 
 	type rangeData struct {
 		start uint64

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,8 +30,8 @@ func TestBasicClusterFormation(t *testing.T) {
 	key := []byte("test")
 
 	// Assert ring consistency
-	AssertConsistentRing(t, nodes)
-
-	// Assert consistent lookups
-	AssertConsistentLookupForKey(t, ctx, nodes, key)
+	assert.EventuallyWithT(t, func(ct *assert.CollectT) {
+		AssertConsistentRing(ct, nodes)
+		AssertConsistentLookupForKey(ct, ctx, nodes, key)
+	}, 10 * time.Second, 100 * time.Millisecond)
 }

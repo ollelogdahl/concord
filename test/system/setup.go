@@ -7,12 +7,10 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log/slog"
-	"net"
 	"sync/atomic"
 	"testing"
 
 	"github.com/ollelogdahl/concord"
-	"google.golang.org/grpc"
 )
 
 func hash(data []byte) uint64 {
@@ -23,14 +21,12 @@ func hash(data []byte) uint64 {
 type ConcordSetup struct {
 	startPort     atomic.Int32
 	nodes         []*concord.Concord
-	grpcServers   map[*concord.Concord]*grpc.Server
 }
 
 func NewConcordSetup() *ConcordSetup {
 	return &ConcordSetup{
 		startPort:   atomic.Int32{},
 		nodes:       make([]*concord.Concord, 0),
-		grpcServers: make(map[*concord.Concord]*grpc.Server),
 	}
 }
 
@@ -41,6 +37,11 @@ func (cs *ConcordSetup) CreateClusterNodes(t *testing.T, ctx context.Context, n 
 		node, err := cs.CreateNode(t, ctx)
 		if err != nil {
 			// Clean up on failure
+			cs.StopNodes(ctx, nodes)
+			return nil, err
+		}
+		err = node.Start()
+		if err != nil {
 			cs.StopNodes(ctx, nodes)
 			return nil, err
 		}
@@ -63,13 +64,6 @@ func (cs *ConcordSetup) CreateNode(t *testing.T, ctx context.Context) (*concord.
 	port := cs.startPort.Add(1)
 	addr := fmt.Sprintf("localhost:%d", 15000+port)
 
-	listener, err := net.Listen("tcp", addr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to listen on %s: %w", addr, err)
-	}
-
-	grpcServer := grpc.NewServer()
-
 	config := concord.Config{
 		Name:    fmt.Sprintf("node-%d", port),
 		BindAddr: addr,
@@ -83,15 +77,6 @@ func (cs *ConcordSetup) CreateNode(t *testing.T, ctx context.Context) (*concord.
 	concord := concord.New(config)
 	cs.nodes = append(cs.nodes, concord)
 
-	cs.grpcServers[concord] = grpcServer
-
-	// Start gRPC server in a goroutine
-	go func() {
-		if err := grpcServer.Serve(listener); err != nil {
-			fmt.Printf("gRPC server error: %v\n", err)
-		}
-	}()
-
 	return concord, nil
 }
 
@@ -101,7 +86,6 @@ func (cs *ConcordSetup) StopNodes(ctx context.Context, nodes []*concord.Concord)
 		if err := node.Stop(); err != nil {
 			fmt.Printf("error stopping node %s: %v\n", node.Name(), err)
 		}
-		cs.grpcServers[node].GracefulStop()
 	}
 
 	return nil

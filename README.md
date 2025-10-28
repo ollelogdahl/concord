@@ -202,6 +202,7 @@ config := concord.Config{
 ```sh
 git clone https://github.com/yourusername/concord.git
 cd concord
+go generate ./...
 go build
 ```
 

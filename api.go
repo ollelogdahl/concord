@@ -7,6 +7,7 @@ package concord
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net"
 
@@ -62,6 +63,7 @@ type Concord struct {
 	ln  net.Listener
 	srv *grpc.Server
 	rpc *rpcHandler
+	started bool
 
 	clients map[string]rpcClient
 
@@ -96,6 +98,11 @@ func (c *Concord) Address() string {
 
 // Starts the Concord service; listens for incoming connections.
 func (c *Concord) Start() error {
+	if c.started {
+		return fmt.Errorf("service already started")
+	}
+	c.started = true
+
 	c.logger.Info("starting server", "bind", c.bindAddr, "address", c.self.Address)
 	c.rpc.RegisterService(c.srv)
 
@@ -117,7 +124,10 @@ func (c *Concord) Start() error {
 // Stops the Concord service.
 func (c *Concord) Stop() error {
 	c.stabilizeCancel()
-	c.srv.Stop()
+	if c.started {
+		c.srv.Stop()
+		c.started = false
+	}
 	return nil
 }
 
