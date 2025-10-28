@@ -104,7 +104,8 @@ func isRingStable(nodes []*concord.Concord) bool {
 		return true
 	}
 	for _, node := range nodes {
-		if len(node.Successors()) == 0 || node.Predecessor() == nil {
+		_, ok := node.Predecessor()
+		if len(node.Successors()) == 0 || !ok {
 			return false
 		}
 	}

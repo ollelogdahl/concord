@@ -161,11 +161,8 @@ func invEvConsistentRingAndCoverage(t assert.TestingT, s *State) {
 			}
 
 			// Check 2: Predecessor exists and is symmetric
-			pred := node.Predecessor()
-			if pred == nil {
-				assert.Fail(ct, "Node %s has no predecessor", name)
-				return
-			}
+			pred, ok := node.Predecessor()
+			assert.True(ct, ok, "Node %s has no predecessor", name)
 
 			predNode, exists := s.Nodes[pred.Name]
 			if !exists {
@@ -202,7 +199,7 @@ func invEvConsistentRingAndCoverage(t assert.TestingT, s *State) {
 			current = s.Nodes[nextName]
 		}
 
-	}, 60 * time.Second, 100 * time.Millisecond)
+	}, 20 * time.Second, 100 * time.Millisecond)
 }
 
 const MAX_SIMULATED_NODES = 10

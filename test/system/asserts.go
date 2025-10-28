@@ -42,8 +42,8 @@ func AssertConsistentRing(t assert.TestingT, nodes []*concord.Concord) {
 		assert.True(t, ok, "Successor %d is not a known node (from node %d)", successor.Id, currentID)
 
 		// Check bidirectional consistency
-		pred := next.Predecessor()
-		assert.NotNil(t, pred, "Node %d has null predecessor (successor of node %d)", successor.Id, currentID)
+		pred, ok := next.Predecessor()
+		assert.True(t, ok, "Node %d has no predecessor (successor of node %d)", successor.Id, currentID)
 		assert.Equal(t, currentID, pred.Id, "Inconsistent links: Node %d → successor %d, but successor's predecessor is %d",
 			currentID, successor.Id, pred.Id)
 

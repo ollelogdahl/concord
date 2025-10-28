@@ -86,12 +86,11 @@ func (c *Concord) fillFingerTable(n *Server) {
 
 func (c *Concord) fixFinger(ctx context.Context, idx uint) error {
 	node, err := c.findSuccessor(ctx, c.finger[idx].Start)
-
 	if err != nil {
 		return fmt.Errorf("failed fixing finger %d: %w", idx, err)
 	}
 
-	c.finger[idx].Node = node
+	c.finger[idx].Node = &node
 	return nil
 }
 
@@ -159,10 +158,6 @@ func (c *Concord) join(ctx context.Context, bootstrap string) error {
 				c.logger.Error("failed find successor, retrying", "error", err)
 				continue
 			}
-			if successor == nil {
-				c.logger.Error("failed to find successor, retrying")
-				continue
-			}
 			c.logger.Info("found successor", "successor", successor.Name)
 
 			// @note: micro optimization.
@@ -186,14 +181,14 @@ func (c *Concord) join(ctx context.Context, bootstrap string) error {
 			}
 
 			// insert ourselves into the ring;
-			c.successors = append([]Server{*successor}, allButLast(r.Successors)...)
+			c.successors = append([]Server{successor}, allButLast(r.Successors)...)
 			c.predecessor = r.Predecessor
 
 			c.logger.Info("joined cluster", "successor", c.successors[0].Name, "predecessor", c.predecessor.Name)
 
 			c.updateRange(Range{c.predecessor.Id, c.self.Id})
 
-			c.fillFingerTable(successor)
+			c.fillFingerTable(&successor)
 
 			go c.stabilizeTask(c.stabilizeCtx)
 			return nil
@@ -201,16 +196,16 @@ func (c *Concord) join(ctx context.Context, bootstrap string) error {
 	}
 }
 
-func (c *Concord) findSuccessor(ctx context.Context, id uint64) (*Server, error) {
+func (c *Concord) findSuccessor(ctx context.Context, id uint64) (Server, error) {
 	c.logger.Info("finding successor", "id", id, "successors", c.successors)
 
 	if between(c.self.Id, id, c.successors[0].Id) {
-		return &c.successors[0], nil
+		return c.successors[0], nil
 	}
 
 	n := c.closestPreceedingNode(id)
 	if n == c.self {
-		return &c.self, nil
+		return c.self, nil
 	}
 
 	// forward request to closest preceeding node first; if fails (due to churn), try successors.
@@ -230,7 +225,7 @@ func (c *Concord) findSuccessor(ctx context.Context, id uint64) (*Server, error)
 		}
 		lastErr = err
 	}
-	return nil, lastErr
+	return Server{}, lastErr
 }
 
 func (c *Concord) closestPreceedingNode(id uint64) Server {
@@ -240,6 +235,14 @@ func (c *Concord) closestPreceedingNode(id uint64) Server {
 		}
 	}
 	return c.self
+}
+
+func (c *Concord) onFindSuccessorRpc(ctx context.Context, id uint64) (Server, error) {
+	return c.findSuccessor(ctx, id)
+}
+
+func (c *Concord) onNotifyRpc(ctx context.Context, srv Server) {
+	c.rectify(ctx, srv)
 }
 
 func (c *Concord) rectify(ctx context.Context, srv Server) {
@@ -286,6 +289,18 @@ func (c *Concord) stabilizeFromSuccessor(ctx context.Context) {
 	}
 }
 
+func (c *Concord) stabilizeFromPredecessor(ctx context.Context, newSucc Server) {
+	pcli, err := c.client(newSucc.Address)
+	if err != nil {
+		return
+	}
+
+	r2, err := pcli.GetRing(ctx)
+	if err == nil {
+		c.successors = append([]Server{newSucc}, allButLast(r2.Successors)...)
+	}
+}
+
 func (c *Concord) notifySuccessor(ctx context.Context) error {
 	cli, err := c.client(c.successors[0].Address)
 	if err != nil {
@@ -296,14 +311,6 @@ func (c *Concord) notifySuccessor(ctx context.Context) error {
 		return fmt.Errorf("failed to notify: %w", err)
 	}
 	return nil
-}
-
-func (c *Concord) stabilizeFromPredecessor(ctx context.Context, newSucc Server) {
-	pcli, _ := c.client(newSucc.Address)
-	r2, err := pcli.GetRing(ctx)
-	if err == nil {
-		c.successors = append([]Server{newSucc}, allButLast(r2.Successors)...)
-	}
 }
 
 func (c *Concord) stabilizeTask(ctx context.Context) {

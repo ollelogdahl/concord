@@ -19,22 +19,20 @@ func (r *rpcHandler) RegisterService(srv *grpc.Server) {
 }
 
 func (r *rpcHandler) FindSuccessor(ctx context.Context, req *rpc.FindReq) (*rpc.FindResp, error) {
-	s, err := r.concord.findSuccessor(ctx, req.Id)
+	s, err := r.concord.onFindSuccessorRpc(ctx, req.Id)
 	if err != nil {
 		return nil, err
 	}
 
 	resp := &rpc.FindResp{}
-	if s != nil {
-		resp.Server = convertServerToProto(s)
-	}
+	resp.Server = convertServerToProto(&s)
 
 	return resp, nil
 }
 
 func (r *rpcHandler) GetRing(ctx context.Context, _ *emptypb.Empty) (*rpc.Ring, error) {
 	succ := r.concord.Successors()
-	pred := r.concord.Predecessor()
+	pred, ok := r.concord.Predecessor()
 
 	protoSuccs := make([]*rpc.Server, len(succ))
 	for i, s := range succ {
@@ -43,20 +41,23 @@ func (r *rpcHandler) GetRing(ctx context.Context, _ *emptypb.Empty) (*rpc.Ring, 
 
 	resp := &rpc.Ring{
 		Successors:  protoSuccs,
-		Predecessor: convertServerToProto(pred),
+	}
+
+	if ok {
+		resp.Predecessor = convertServerToProto(&pred)
 	}
 
 	return resp, nil
 }
 
 func (r *rpcHandler) Notify(ctx context.Context, srv *rpc.Server) (*emptypb.Empty, error) {
-	r.concord.rectify(ctx, *convertProtoToServer(srv))
+	r.concord.onNotifyRpc(ctx, *convertProtoToServer(srv))
 
 	return &emptypb.Empty{}, nil
 }
 
 type rpcClient interface {
-	FindSuccessor(ctx context.Context, id uint64) (*Server, error)
+	FindSuccessor(ctx context.Context, id uint64) (Server, error)
 	GetRing(ctx context.Context) (ring, error)
 	Notify(ctx context.Context, srv Server) error
 }
@@ -90,14 +91,14 @@ func newClientDispatch(hnd *rpcHandler) rpcClient {
 	}
 }
 
-func (c *rpcClientGrpc) FindSuccessor(ctx context.Context, id uint64) (*Server, error) {
+func (c *rpcClientGrpc) FindSuccessor(ctx context.Context, id uint64) (Server, error) {
 	req := rpc.FindReq{Id: id}
 	resp, err := c.cli.FindSuccessor(ctx, &req)
 	if err != nil {
-		return nil, err
+		return Server{}, err
 	}
 
-	return convertProtoToServer(resp.Server), nil
+	return *convertProtoToServer(resp.Server), nil
 }
 func (c *rpcClientGrpc) GetRing(ctx context.Context) (ring, error) {
 	resp, err := c.cli.GetRing(ctx, &emptypb.Empty{})
@@ -127,14 +128,14 @@ func (c *rpcClientGrpc) Notify(ctx context.Context, srv Server) error {
 	return nil
 }
 
-func (c *rpcClientDispatch) FindSuccessor(ctx context.Context, id uint64) (*Server, error) {
+func (c *rpcClientDispatch) FindSuccessor(ctx context.Context, id uint64) (Server, error) {
 	req := rpc.FindReq{Id: id}
 	resp, err := c.hnd.FindSuccessor(ctx, &req)
 	if err != nil {
-		return nil, err
+		return Server{}, err
 	}
 
-	return convertProtoToServer(resp.Server), nil
+	return *convertProtoToServer(resp.Server), nil
 }
 func (c *rpcClientDispatch) GetRing(ctx context.Context) (ring, error) {
 	resp, err := c.hnd.GetRing(ctx, &emptypb.Empty{})

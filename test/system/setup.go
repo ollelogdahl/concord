@@ -68,9 +68,6 @@ func (cs *ConcordSetup) CreateNode(t *testing.T, ctx context.Context) (*concord.
 		Name:    fmt.Sprintf("node-%d", port),
 		BindAddr: addr,
 		AdvAddr: addr,
-		OnRangeChange: func(r concord.Range) error {
-			return nil
-		},
 		LogHandler: slog.NewTextHandler(&testLogWriter{t}, nil),
 	}
 

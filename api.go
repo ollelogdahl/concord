@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"sync"
 
 	"google.golang.org/grpc"
 )
@@ -60,6 +61,7 @@ type Concord struct {
 	bindAddr string
 	advAddr  string
 
+	lock sync.RWMutex
 	ln  net.Listener
 	srv *grpc.Server
 	rpc *rpcHandler
@@ -85,21 +87,33 @@ func New(config Config) *Concord {
 
 // Returns the name of the Concord service.
 func (c *Concord) Name() string {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
 	return c.self.Name
 }
 
 // Returns the ID of the Concord service.
 func (c *Concord) Id() uint64 {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
 	return c.self.Id
 }
 
 // Returns the address of the Concord service.
 func (c *Concord) Address() string {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
 	return c.self.Address
 }
 
 // Starts the Concord service; listens for incoming connections.
 func (c *Concord) Start() error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	if c.started {
 		return fmt.Errorf("service already started")
 	}
@@ -125,6 +139,9 @@ func (c *Concord) Start() error {
 
 // Stops the Concord service.
 func (c *Concord) Stop() error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	c.stabilizeCancel()
 	if c.started {
 		c.srv.Stop()
@@ -135,30 +152,55 @@ func (c *Concord) Stop() error {
 
 // Creates a new cluster. The Concord instance must be started before calling this method.
 func (c *Concord) Create() error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	return c.create()
 }
 
 // Joins an existing cluster. The Concord instance must be started before calling this method.
 func (c *Concord) Join(ctx context.Context, bootstrapAddress string) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	return c.join(ctx, bootstrapAddress)
 }
 
 // Looks up the server responsible for the given key.
-func (c *Concord) Lookup(key []byte) (*Server, error) {
+func (c *Concord) Lookup(key []byte) (Server, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
 	return c.findSuccessor(context.Background(), c.hashFunc(key))
 }
 
 // Returns the list of successor servers.
 func (c *Concord) Successors() []Server {
-	return c.successors
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	// do a deep copy to ensure that the values are not modified.
+	copiedSuccessors := make([]Server, len(c.successors))
+	copy(copiedSuccessors, c.successors)
+
+	return copiedSuccessors
 }
 
 // Returns the predecessor server.
-func (c *Concord) Predecessor() *Server {
-	return c.predecessor
+func (c *Concord) Predecessor() (Server, bool) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	if c.predecessor == nil {
+		return Server{}, false
+	}
+	return *c.predecessor, true
 }
 
 // Returns the range of keys managed by this server.
 func (c *Concord) Range() Range {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
 	return c.interval
 }
