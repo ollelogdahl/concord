@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"math/rand/v2"
 	"time"
-	"flag"
 
 	"github.com/ollelogdahl/concord"
 	"github.com/ollelogdahl/concord/test/fuzz/fz"
@@ -20,7 +20,7 @@ type State struct {
 }
 
 type spawnP struct {
-	Name string
+	Name   string
 	ToJoin string
 }
 
@@ -61,7 +61,7 @@ func genSpawn(s *State) []spawnP {
 
 	for name, _ := range s.Nodes {
 		tasks = append(tasks, spawnP{
-			Name: fmt.Sprintf("cord%d", s.portIncrementor),
+			Name:   fmt.Sprintf("cord%d", s.portIncrementor),
 			ToJoin: name,
 		})
 	}
@@ -97,7 +97,7 @@ func genKill(s *State) []killP {
 }
 
 func (s *State) nextAddrs() (string, string) {
-	baddr := fmt.Sprintf(":%d", 10000 + s.portIncrementor)
+	baddr := fmt.Sprintf(":%d", 10000+s.portIncrementor)
 	addr := fmt.Sprintf("localhost%s", baddr)
 
 	return baddr, addr
@@ -114,9 +114,9 @@ func doSpawn(s *State, p spawnP) {
 	baddr, addr := s.nextAddrs()
 
 	cfg := concord.Config{
-		Name: name,
+		Name:     name,
 		BindAddr: baddr,
-		AdvAddr: addr,
+		AdvAddr:  addr,
 	}
 
 	instance := concord.New(cfg)
@@ -137,7 +137,7 @@ func doKill(s *State, p killP) {
 }
 
 func invEvConsistentRingAndCoverage(t assert.TestingT, s *State) {
-	assert.EventuallyWithT(t, func(ct *assert.CollectT){
+	assert.EventuallyWithT(t, func(ct *assert.CollectT) {
 		// ensure that:
 		// - \forall n \in s.Nodes n.Successor \in s.Nodes
 		// - following successors forms a correct ring
@@ -199,7 +199,7 @@ func invEvConsistentRingAndCoverage(t assert.TestingT, s *State) {
 			current = s.Nodes[nextName]
 		}
 
-	}, 60 * time.Second, 100 * time.Millisecond)
+	}, 60*time.Second, 100*time.Millisecond)
 }
 
 const MAX_SIMULATED_NODES = 10
@@ -207,7 +207,7 @@ const MAX_SIMULTANEOUS_KILLS = 4
 
 func main() {
 
-	maxTime := flag.Duration("fuzztime", 1<<63 - 1, "duration to run the fuzzer")
+	maxTime := flag.Duration("fuzztime", 1<<63-1, "duration to run the fuzzer")
 
 	flag.Parse()
 
@@ -223,8 +223,8 @@ func main() {
 
 	// initial state
 	initialState := State{
-		Nodes: make(map[string]*concord.Concord),
-		Addrs: make(map[string]string),
+		Nodes:           make(map[string]*concord.Concord),
+		Addrs:           make(map[string]string),
 		portIncrementor: 0,
 	}
 
@@ -234,9 +234,9 @@ func main() {
 		baddr, addr := initialState.nextAddrs()
 
 		cfg := concord.Config{
-			Name: name,
+			Name:     name,
 			BindAddr: baddr,
-			AdvAddr: addr,
+			AdvAddr:  addr,
 		}
 
 		instance := concord.New(cfg)

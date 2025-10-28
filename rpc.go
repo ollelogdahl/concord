@@ -40,7 +40,7 @@ func (r *rpcHandler) GetRing(ctx context.Context, _ *emptypb.Empty) (*rpc.Ring, 
 	}
 
 	resp := &rpc.Ring{
-		Successors:  protoSuccs,
+		Successors: protoSuccs,
 	}
 
 	if ok {

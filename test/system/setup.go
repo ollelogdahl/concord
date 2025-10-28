@@ -14,19 +14,19 @@ import (
 )
 
 func hash(data []byte) uint64 {
-    h := sha256.Sum256(data)
-    return binary.BigEndian.Uint64(h[:8])
+	h := sha256.Sum256(data)
+	return binary.BigEndian.Uint64(h[:8])
 }
 
 type ConcordSetup struct {
-	startPort     atomic.Int32
-	nodes         []*concord.Concord
+	startPort atomic.Int32
+	nodes     []*concord.Concord
 }
 
 func NewConcordSetup() *ConcordSetup {
 	return &ConcordSetup{
-		startPort:   atomic.Int32{},
-		nodes:       make([]*concord.Concord, 0),
+		startPort: atomic.Int32{},
+		nodes:     make([]*concord.Concord, 0),
 	}
 }
 
@@ -65,9 +65,9 @@ func (cs *ConcordSetup) CreateNode(t *testing.T, ctx context.Context) (*concord.
 	addr := fmt.Sprintf("localhost:%d", 15000+port)
 
 	config := concord.Config{
-		Name:    fmt.Sprintf("node-%d", port),
-		BindAddr: addr,
-		AdvAddr: addr,
+		Name:       fmt.Sprintf("node-%d", port),
+		BindAddr:   addr,
+		AdvAddr:    addr,
 		LogHandler: slog.NewTextHandler(&testLogWriter{t}, nil),
 	}
 

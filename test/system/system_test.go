@@ -33,5 +33,5 @@ func TestBasicClusterFormation(t *testing.T) {
 	assert.EventuallyWithT(t, func(ct *assert.CollectT) {
 		AssertConsistentRing(ct, nodes)
 		AssertConsistentLookupForKey(ct, ctx, nodes, key)
-	}, 10 * time.Second, 100 * time.Millisecond)
+	}, 10*time.Second, 100*time.Millisecond)
 }

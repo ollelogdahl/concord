@@ -11,9 +11,9 @@ import (
 )
 
 type Action[S any, P any] struct {
-	Name     string
-	Gen      func(*S) []P
-	Exec     func(*S, P)
+	Name string
+	Gen  func(*S) []P
+	Exec func(*S, P)
 }
 
 func (a *Action[S, P]) generate(s *S) []concreteAction[S] {
@@ -40,33 +40,33 @@ type concreteAction[S any] struct {
 }
 
 type Invariant[S any] struct {
-	Name string
-	Check func (assert.TestingT, *S)
+	Name  string
+	Check func(assert.TestingT, *S)
 }
 
 type Fuzzer[S any] struct {
-	logger *log.Logger
-	actions []actionTypeWrapper[S]
-	invariants []Invariant[S]
-	iteration int
+	logger              *log.Logger
+	actions             []actionTypeWrapper[S]
+	invariants          []Invariant[S]
+	iteration           int
 	consecutiveStutters int
-	rng *rand.Rand
-	ct CrashT
+	rng                 *rand.Rand
+	ct                  CrashT
 
-	startTime time.Time
-	maxDuration time.Duration
+	startTime     time.Time
+	maxDuration   time.Duration
 	actionTimeout time.Duration
 }
 
 func NewFuzzer[S any](r *rand.Rand, maxDuration time.Duration) *Fuzzer[S] {
 	return &Fuzzer[S]{
-		logger: log.Default(),
-		actions: make([]actionTypeWrapper[S], 0),
-		invariants: make([]Invariant[S], 0),
-		iteration: 0,
-		rng: r,
-		ct: CrashT{},
-		maxDuration: maxDuration,
+		logger:        log.Default(),
+		actions:       make([]actionTypeWrapper[S], 0),
+		invariants:    make([]Invariant[S], 0),
+		iteration:     0,
+		rng:           r,
+		ct:            CrashT{},
+		maxDuration:   maxDuration,
 		actionTimeout: 10 * time.Second,
 	}
 }
@@ -74,13 +74,13 @@ func NewFuzzer[S any](r *rand.Rand, maxDuration time.Duration) *Fuzzer[S] {
 func AddAction[S any, P any](f *Fuzzer[S], name string, gen func(*S) []P, exec func(*S, P)) {
 	at := &Action[S, P]{
 		Name: name,
-		Gen: gen,
+		Gen:  gen,
 		Exec: exec,
 	}
 	f.actions = append(f.actions, at)
 }
 
-func (f *Fuzzer[S]) AddInvariant(name string, check func (assert.TestingT, *S)) {
+func (f *Fuzzer[S]) AddInvariant(name string, check func(assert.TestingT, *S)) {
 	i := Invariant[S]{name, check}
 	f.invariants = append(f.invariants, i)
 }
@@ -111,7 +111,6 @@ func (f *Fuzzer[S]) Iteration(s *S) {
 	}
 	f.consecutiveStutters = 0
 
-
 	// pick random
 	selectedAction := enabled[rand.IntN(len(enabled))]
 
@@ -135,7 +134,6 @@ func (f *Fuzzer[S]) Iteration(s *S) {
 		f.ct.Errorf("action %s timed out after %s", selectedAction.name, f.actionTimeout)
 	}
 
-
 	f.CheckInvariants(s)
 }
 
@@ -153,13 +151,13 @@ func (f *Fuzzer[S]) Run(s *S) {
 // CrashT implements testing.TB and assert.TestingT.
 // It is designed to panic immediately on any assertion failure.
 type CrashT struct {
-	where string
+	where     string
 	startTime time.Time
 }
 
 // Crash immediately on non-fatal assertion failure (e.g., assert.Equal).
 func (t *CrashT) Errorf(format string, args ...interface{}) {
-    errorMsg := fmt.Sprintf(format, args...)
+	errorMsg := fmt.Sprintf(format, args...)
 
 	fmt.Printf("\n[FUZZER CRASH] (%s) fatal assertion failure%s: %s\n", time.Since(t.startTime), t.where, errorMsg)
 	os.Exit(1)

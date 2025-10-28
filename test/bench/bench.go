@@ -26,10 +26,10 @@ type BenchmarkRun struct {
 }
 
 var (
-	results     []BenchmarkRun
-	mu          sync.Mutex
-	iterations  = 10
-	outputFile  = "bench_results.json"
+	results    []BenchmarkRun
+	mu         sync.Mutex
+	iterations = 10
+	outputFile = "bench_results.json"
 )
 
 func recordSample(name string, params map[string]int, durationMs float64) {
@@ -63,9 +63,9 @@ func saveResults() {
 
 func createTestConfig(name, bindAddr, advAddr string) concord.Config {
 	return concord.Config{
-		Name:     name,
-		BindAddr: bindAddr,
-		AdvAddr:  advAddr,
+		Name:       name,
+		BindAddr:   bindAddr,
+		AdvAddr:    advAddr,
 		LogHandler: slog.NewTextHandler(io.Discard, nil),
 	}
 }
