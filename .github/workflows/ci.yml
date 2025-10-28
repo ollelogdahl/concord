@@ -29,9 +29,10 @@ jobs:
 
     - name: Run fuzzing (5 minutes)
       if: ${{ matrix.go-version == '1.25' }}
+      env:
+        GORACE: "halt_on_error=true"
       run: |
-        # Run each fuzz test for 5 minutes total
-        timeout 6m go run ./test/fuzz/fuzz.go -fuzztime=5m || true
+        timeout 6m go run -race ./test/fuzz/fuzz.go -fuzztime=5m
 
     - name: Upload coverage
       uses: codecov/codecov-action@v3
