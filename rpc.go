@@ -42,7 +42,7 @@ func (r *rpcHandler) GetRing(ctx context.Context, _ *emptypb.Empty) (*rpc.Ring, 
 	}
 
 	resp := &rpc.Ring{
-		Successors: protoSuccs,
+		Successors:  protoSuccs,
 		Predecessor: convertServerToProto(pred),
 	}
 
@@ -63,7 +63,7 @@ type rpcClient interface {
 
 type rpcClientGrpc struct {
 	conn *grpc.ClientConn
-	cli rpc.ChordServiceClient
+	cli  rpc.ChordServiceClient
 }
 
 type rpcClientDispatch struct {
@@ -80,7 +80,7 @@ func newClientGrpc(addr string) (rpcClient, error) {
 
 	return &rpcClientGrpc{
 		conn: conn,
-		cli: cli,
+		cli:  cli,
 	}, nil
 }
 
