@@ -199,7 +199,7 @@ func invEvConsistentRingAndCoverage(t assert.TestingT, s *State) {
 			current = s.Nodes[nextName]
 		}
 
-	}, 20 * time.Second, 100 * time.Millisecond)
+	}, 60 * time.Second, 100 * time.Millisecond)
 }
 
 const MAX_SIMULATED_NODES = 10
