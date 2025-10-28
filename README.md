@@ -224,7 +224,7 @@ go test -race ./...
 Concord includes fuzz tests for checking eventual consistent invariants.
 
 ```
-go run ./internal/test/fuzz/fuzz.go
+go run ./test/fuzz/fuzz.go
 ```
 
 ## Test Nodes
@@ -246,4 +246,4 @@ This project is licenced under the [MIT License](github.com/ollelogdahl/concord/
 - Original chord paper: [Chord: A Scalable Peer-to-Peer Lookup Service for Internet](https://pdos.csail.mit.edu/papers/chord:sigcomm01/chord_sigcomm.pdf)
 - Formally proven Chord: [Reasoning about Identifier Spaces: How to Make Chord Correct](https://www.pamelazave.com/TSE_Chord_final.pdf)
 
-<p align="center">Made with ❤️ by Olle</p>
+<p align="center">Made with ☕ by Olle</p>

@@ -20,7 +20,7 @@ type Config struct {
 	BindAddr string
 	AdvAddr  string
 
-	OnRangeChange func(Range) error
+	OnRangeChange func(Range)
 
 	HashFunc func([]byte) uint64
 	HashBits uint
@@ -72,6 +72,8 @@ type Concord struct {
 
 	hashFunc func([]byte) uint64
 	hashBits uint
+
+	rangeChangeCallback func(Range)
 
 	logger *slog.Logger
 }

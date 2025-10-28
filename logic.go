@@ -44,6 +44,8 @@ func newConcord(config Config) *Concord {
 	cc.bindAddr = config.BindAddr
 	cc.advAddr = config.AdvAddr
 
+	cc.rangeChangeCallback = config.OnRangeChange
+
 	if config.LogHandler == nil {
 		config.LogHandler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
 	}
@@ -327,6 +329,9 @@ func (c *Concord) stabilizeTask(ctx context.Context) {
 
 func (c *Concord) updateRange(r Range) {
 	c.interval = r
+	if c.rangeChangeCallback != nil {
+		c.rangeChangeCallback(r)
+	}
 }
 
 // returns true if a < b < c where a ring is respected.
