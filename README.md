@@ -31,8 +31,6 @@ for building scalable distributed systems.
 
 The design of this library is based upon the formally proven work by Pamela Zave.
 
-# What is Chord?
-
 # Features
 
 # Installation
@@ -222,6 +220,7 @@ go test -race ./...
 ## Fuzzing
 
 Concord includes fuzz tests for checking eventual consistent invariants.
+Can also run with race condition checking using the `-race` flag.
 
 ```
 go run ./test/fuzz/fuzz.go
