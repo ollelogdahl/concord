@@ -15,6 +15,7 @@ import (
 
 const (
 	StabilizeInterval = 3 * time.Second
+	SuccessorCount = 3
 )
 
 func newConcord(config Config) *Concord {
@@ -100,9 +101,7 @@ func (c *Concord) create() error {
 
 	c.logger.Info("creating new cluster")
 
-	const SUCCESSOR_COUNT = 3
-
-	c.successors = make([]Server, SUCCESSOR_COUNT)
+	c.successors = make([]Server, SuccessorCount)
 	for i := range c.successors {
 		c.successors[i] = c.self
 	}
@@ -121,6 +120,16 @@ func allButLast[T any](slice []T) []T {
 		return []T{}
 	}
 	return slice[:len(slice)-1]
+}
+
+func truncate[T any](slice []T, ln int) []T {
+	if ln == 0 {
+		return []T{}
+	}
+	if len(slice) < ln {
+		ln = len(slice)
+	}
+	return slice[:ln]
 }
 
 func tail[T any](slice []T) []T {
@@ -249,32 +258,49 @@ func (c *Concord) closestPreceedingNode(id uint64) Server {
 }
 
 func (c *Concord) rectify(ctx context.Context, srv Server) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
 	// c.logger.Debug("rectifying", "srv", srv)
 	if c.predecessor == nil || between(c.predecessor.Id, srv.Id, c.self.Id) {
 		c.predecessor = &srv
+		c.updateRange(Range{srv.Id, c.self.Id})
 	} else {
 		cli, _ := c.client(c.predecessor.Address)
 
 		// query liveness from predecessor
+		c.lock.Unlock()
 		_, err := cli.GetRing(ctx)
+		c.lock.Lock()
 
 		if err != nil {
 			c.predecessor = &srv
+			c.updateRange(Range{c.predecessor.Id, c.self.Id})
 		}
 	}
 }
 
 func (c *Concord) stabilizeFromSuccessor(ctx context.Context) {
 	for {
+		c.lock.RLock()
 		cli, _ := c.client(c.successors[0].Address)
+		c.lock.RUnlock()
 		r, err := cli.GetRing(ctx)
+
+		c.lock.Lock()
 		if err == nil {
-			c.successors = append(head(c.successors), allButLast(r.Successors)...)
+			if len(c.successors) < SuccessorCount {
+				c.successors = append(head(c.successors), r.Successors...)
+			} else {
+				c.successors = append(head(c.successors), truncate(r.Successors, SuccessorCount-1)...)
+			}
 
 			// check if a new successor to us has been added.
 			newSucc := r.Predecessor
 			if newSucc != nil && between(c.self.Id, newSucc.Id, c.successors[0].Id) {
+				c.lock.Unlock()
 				c.stabilizeFromPredecessor(ctx, *newSucc)
+			} else {
+				c.lock.Unlock()
 			}
 
 			go c.notifySuccessor(ctx)
@@ -285,9 +311,13 @@ func (c *Concord) stabilizeFromSuccessor(ctx context.Context) {
 				c.logger.Info("failed to reach all successors; complete isolation")
 				c.successors = []Server{c.self}
 				c.predecessor = &c.self
+				c.lock.Unlock()
+				go c.notifySuccessor(ctx)
+				return
 			} else {
 				c.successors = tail(c.successors)
 			}
+			c.lock.Unlock()
 		}
 
 		go c.notifySuccessor(ctx)
@@ -302,12 +332,17 @@ func (c *Concord) stabilizeFromPredecessor(ctx context.Context, newSucc Server) 
 
 	r2, err := pcli.GetRing(ctx)
 	if err == nil {
+		c.lock.Lock()
 		c.successors = append([]Server{newSucc}, allButLast(r2.Successors)...)
+		c.lock.Unlock()
 	}
 }
 
 func (c *Concord) notifySuccessor(ctx context.Context) error {
+	c.lock.RLock()
 	cli, err := c.client(c.successors[0].Address)
+	c.lock.RUnlock()
+
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
@@ -334,7 +369,9 @@ func (c *Concord) stabilizeTask(ctx context.Context) {
 				c.logger.Warn(err.Error())
 			}
 
+			c.lock.RLock()
 			c.logger.Debug("stabilized", "successor", c.successors[0].Name, "predecessor", c.predecessor.Name)
+			c.lock.RUnlock()
 		}
 	}
 }
