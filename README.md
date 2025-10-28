@@ -35,10 +35,10 @@ The design of this library is based upon the formally proven work by Pamela Zave
 
 * **Failure Resilient:** Built-in configurable resilience to node failures ($N$), ensuring the ring remains operational and consistent.
 * **Consistent Hashing Core:** Provides the robust underlying logic for consistent hashing in a distributed environment.
-* **Range Change Callbacks:** Includes a callback function (`OnRangeChange`) that notifies the 
+* **Range Change Callbacks:** Includes a callback function (`OnRangeChange`) that notifies the
   application when a node becomes responsible for a new range of keys, essential for
   building a DHT.
-* **Customizable Hashing:** Supports custom hash functions and configurable hash bit-widths (up to 
+* **Customizable Hashing:** Supports custom hash functions and configurable hash bit-widths (up to
   64-bit keys).
 * **Structured Logging:** Uses Go's built-in `log/slog` for structured and customizable logging.
 * **gRPC Based:** Uses **gRPC** for internal node-to-node communication.
@@ -225,7 +225,7 @@ config := concord.Config{
 ## Building
 
 ```sh
-git clone https://github.com/yourusername/concord.git
+git clone https://github.com/ollelogdahl/concord.git
 cd concord
 go generate ./...
 go build
