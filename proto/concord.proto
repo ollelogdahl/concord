@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package concord;
+option go_package = "internal/rpc";
+
+import "google/protobuf/empty.proto";
+
+message FindReq {
+    uint64 id = 1;
+}
+
+message FindResp {
+    optional Server server = 1;
+}
+
+message Server {
+    uint64 id = 1;
+    string name = 2;
+    string address = 3;
+}
+
+message Ring {
+    optional Server predecessor = 1;
+    repeated Server successors = 2;
+}
+
+service ChordService {
+    rpc FindSuccessor(FindReq) returns (FindResp);
+
+    rpc GetRing(google.protobuf.Empty) returns (Ring);
+    rpc Notify(Server) returns (google.protobuf.Empty);
+}
