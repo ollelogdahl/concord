@@ -33,6 +33,16 @@ The design of this library is based upon the formally proven work by Pamela Zave
 
 # Features
 
+* **Failure Resilient:** Built-in configurable resilience to node failures ($N$), ensuring the ring remains operational and consistent.
+* **Consistent Hashing Core:** Provides the robust underlying logic for consistent hashing in a distributed environment.
+* **Range Change Callbacks:** Includes a callback function (`OnRangeChange`) that notifies the 
+  application when a node becomes responsible for a new range of keys, essential for
+  building a DHT.
+* **Customizable Hashing:** Supports custom hash functions and configurable hash bit-widths (up to 
+  64-bit keys).
+* **Structured Logging:** Uses Go's built-in `log/slog` for structured and customizable logging.
+* **gRPC Based:** Uses **gRPC** for internal node-to-node communication.
+
 # Installation
 
 ```sh
@@ -182,6 +192,23 @@ config := concord.Config{
     Name:       "node1",
     BindAddr:   "0.0.0.0:7946",
     AdvAddr:    "node1.example.com:7946",
+    LogHandler: slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+        Level: slog.LevelDebug,
+    }),
+}
+```
+
+## Resilience
+
+By default, the system supports up to 2 simultaneous failures of nodes. This is configurable
+by setting `SuccessorCount` to $N+1$, where $N$ is the amount of simultaneous fails.
+
+```go
+config := concord.Config{
+    Name:       "node1",
+    BindAddr:   "0.0.0.0:7946",
+    AdvAddr:    "node1.example.com:7946",
+    SuccessorCount: 5,
     LogHandler: slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
         Level: slog.LevelDebug,
     }),

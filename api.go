@@ -26,7 +26,8 @@ type Config struct {
 	HashFunc func([]byte) uint64
 	HashBits uint
 
-	LogHandler slog.Handler
+	SuccessorCount uint
+	LogHandler     slog.Handler
 }
 
 type Range struct {
@@ -52,23 +53,24 @@ type fingerEntry struct {
 
 // A handle to an instance of the Concord service.
 type Concord struct {
-	self        Server
-	interval    Range
-	successors  []Server
-	predecessor *Server
-	finger      []fingerEntry
+	self           Server
+	interval       Range
+	successors     []Server
+	predecessor    *Server
+	finger         []fingerEntry
+	successorCount uint
 
 	bindAddr string
 	advAddr  string
 
-	lock sync.RWMutex
-	ln  net.Listener
-	srv *grpc.Server
-	rpc *rpcHandler
+	lock    sync.RWMutex
+	ln      net.Listener
+	srv     *grpc.Server
+	rpc     *rpcHandler
 	started bool
 
 	clientsLock sync.Mutex
-	clients map[string]rpcClient
+	clients     map[string]rpcClient
 
 	stabilizeCtx    context.Context
 	stabilizeCancel context.CancelFunc

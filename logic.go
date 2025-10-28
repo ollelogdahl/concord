@@ -15,7 +15,6 @@ import (
 
 const (
 	StabilizeInterval = 3 * time.Second
-	SuccessorCount = 3
 )
 
 func newConcord(config Config) *Concord {
@@ -35,6 +34,11 @@ func newConcord(config Config) *Concord {
 		Id:      id,
 		Address: config.AdvAddr,
 	}
+
+	if config.SuccessorCount == 0 {
+		config.SuccessorCount = 3
+	}
+	cc.successorCount = config.SuccessorCount
 
 	cc.srv = grpc.NewServer()
 	cc.rpc = &rpcHandler{concord: cc}
@@ -101,7 +105,7 @@ func (c *Concord) create() error {
 
 	c.logger.Info("creating new cluster")
 
-	c.successors = make([]Server, SuccessorCount)
+	c.successors = make([]Server, c.successorCount)
 	for i := range c.successors {
 		c.successors[i] = c.self
 	}
@@ -288,10 +292,10 @@ func (c *Concord) stabilizeFromSuccessor(ctx context.Context) {
 
 		c.lock.Lock()
 		if err == nil {
-			if len(c.successors) < SuccessorCount {
+			if uint(len(c.successors)) < c.successorCount {
 				c.successors = append(head(c.successors), r.Successors...)
 			} else {
-				c.successors = append(head(c.successors), truncate(r.Successors, SuccessorCount-1)...)
+				c.successors = append(head(c.successors), truncate(r.Successors, int(c.successorCount-1))...)
 			}
 
 			// check if a new successor to us has been added.
