@@ -67,6 +67,7 @@ type Concord struct {
 	rpc *rpcHandler
 	started bool
 
+	clientsLock sync.Mutex
 	clients map[string]rpcClient
 
 	stabilizeCtx    context.Context
@@ -152,25 +153,16 @@ func (c *Concord) Stop() error {
 
 // Creates a new cluster. The Concord instance must be started before calling this method.
 func (c *Concord) Create() error {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
 	return c.create()
 }
 
 // Joins an existing cluster. The Concord instance must be started before calling this method.
 func (c *Concord) Join(ctx context.Context, bootstrapAddress string) error {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
 	return c.join(ctx, bootstrapAddress)
 }
 
 // Looks up the server responsible for the given key.
 func (c *Concord) Lookup(key []byte) (Server, error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-
 	return c.findSuccessor(context.Background(), c.hashFunc(key))
 }
 

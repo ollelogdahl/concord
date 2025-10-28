@@ -95,6 +95,9 @@ func (c *Concord) fixFinger(ctx context.Context, idx uint) error {
 }
 
 func (c *Concord) create() error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	c.logger.Info("creating new cluster")
 
 	const SUCCESSOR_COUNT = 3
@@ -175,8 +178,10 @@ func (c *Concord) join(ctx context.Context, bootstrap string) error {
 				continue
 			}
 
+			c.lock.Lock()
 			if r.Predecessor == nil {
 				c.logger.Error("successor has no predecessor, retrying")
+				c.lock.Unlock()
 				continue
 			}
 
@@ -191,26 +196,32 @@ func (c *Concord) join(ctx context.Context, bootstrap string) error {
 			c.fillFingerTable(&successor)
 
 			go c.stabilizeTask(c.stabilizeCtx)
+
+			c.lock.Unlock()
 			return nil
 		}
 	}
 }
 
 func (c *Concord) findSuccessor(ctx context.Context, id uint64) (Server, error) {
+	c.lock.RLock()
 	c.logger.Info("finding successor", "id", id, "successors", c.successors)
 
 	if between(c.self.Id, id, c.successors[0].Id) {
+		defer c.lock.RUnlock()
 		return c.successors[0], nil
 	}
 
 	n := c.closestPreceedingNode(id)
 	if n == c.self {
+		defer c.lock.RUnlock()
 		return c.self, nil
 	}
 
 	// forward request to closest preceeding node first; if fails (due to churn), try successors.
 	contenders := append([]Server{n}, c.successors...)
 	var lastErr error
+	c.lock.RUnlock()
 
 	for _, contender := range contenders {
 		cli, err := c.client(contender.Address)
@@ -237,22 +248,16 @@ func (c *Concord) closestPreceedingNode(id uint64) Server {
 	return c.self
 }
 
-func (c *Concord) onFindSuccessorRpc(ctx context.Context, id uint64) (Server, error) {
-	return c.findSuccessor(ctx, id)
-}
-
-func (c *Concord) onNotifyRpc(ctx context.Context, srv Server) {
-	c.rectify(ctx, srv)
-}
-
 func (c *Concord) rectify(ctx context.Context, srv Server) {
 	// c.logger.Debug("rectifying", "srv", srv)
-	if between(c.predecessor.Id, srv.Id, c.self.Id) {
+	if c.predecessor == nil || between(c.predecessor.Id, srv.Id, c.self.Id) {
 		c.predecessor = &srv
 	} else {
-		// query liveness from predecessor
 		cli, _ := c.client(c.predecessor.Address)
+
+		// query liveness from predecessor
 		_, err := cli.GetRing(ctx)
+
 		if err != nil {
 			c.predecessor = &srv
 		}
@@ -351,6 +356,8 @@ func between(a, b, c uint64) bool {
 }
 
 func (c *Concord) client(addr string) (rpcClient, error) {
+	c.clientsLock.Lock()
+	defer c.clientsLock.Unlock()
 	cli, ok := c.clients[addr]
 	if !ok {
 

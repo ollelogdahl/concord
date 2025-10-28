@@ -19,7 +19,7 @@ func (r *rpcHandler) RegisterService(srv *grpc.Server) {
 }
 
 func (r *rpcHandler) FindSuccessor(ctx context.Context, req *rpc.FindReq) (*rpc.FindResp, error) {
-	s, err := r.concord.onFindSuccessorRpc(ctx, req.Id)
+	s, err := r.concord.findSuccessor(ctx, req.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (r *rpcHandler) GetRing(ctx context.Context, _ *emptypb.Empty) (*rpc.Ring, 
 }
 
 func (r *rpcHandler) Notify(ctx context.Context, srv *rpc.Server) (*emptypb.Empty, error) {
-	r.concord.onNotifyRpc(ctx, *convertProtoToServer(srv))
+	r.concord.rectify(ctx, *convertProtoToServer(srv))
 
 	return &emptypb.Empty{}, nil
 }
