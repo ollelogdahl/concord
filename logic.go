@@ -225,7 +225,7 @@ func (c *Concord) findSuccessor(ctx context.Context, id uint64) (Server, error) 
 		return c.successors[0], nil
 	}
 
-	n := c.closestPreceedingNode(id)
+	n := c.closestPrecedingNode(id)
 	if n == c.self {
 		defer c.lock.RUnlock()
 		return c.self, nil
@@ -252,7 +252,7 @@ func (c *Concord) findSuccessor(ctx context.Context, id uint64) (Server, error) 
 	return Server{}, lastErr
 }
 
-func (c *Concord) closestPreceedingNode(id uint64) Server {
+func (c *Concord) closestPrecedingNode(id uint64) Server {
 	for i := int(c.hashBits - 1); i >= 0; i-- {
 		if c.finger[i].Node != nil && between(c.self.Id, c.finger[i].Node.Id, id) {
 			return *c.finger[i].Node
