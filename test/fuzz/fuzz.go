@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"time"
+	"flag"
 
 	"github.com/ollelogdahl/concord"
 	"github.com/ollelogdahl/concord/test/fuzz/fz"
@@ -192,7 +193,7 @@ func invEvConsistentRingAndCoverage(t assert.TestingT, s *State) {
 		for len(visited) < len(s.Nodes) {
 			name := current.Name()
 			if visited[name] {
-				assert.Fail(ct, "Ring has cycle before visiting all nodes. expected %+v, visited %+v", s.Nodes, visited)
+				assert.Fail(ct, "inconsistent", "Ring has cycle before visiting all nodes. expected %+v, visited %+v", s.Nodes, visited)
 				return
 			}
 			visited[name] = true
@@ -208,8 +209,13 @@ const MAX_SIMULATED_NODES = 10
 const MAX_SIMULTANEOUS_KILLS = 4
 
 func main() {
+
+	maxTime := flag.Duration("fuzztime", 1<<63 - 1, "duration to run the fuzzer")
+
+	flag.Parse()
+
 	rng := rand.New(rand.NewPCG(0, 1))
-	fuzz := fz.NewFuzzer[State](rng)
+	fuzz := fz.NewFuzzer[State](rng, *maxTime)
 
 	fz.AddAction(fuzz, "spawn", genSpawn, doSpawn)
 	fz.AddAction(fuzz, "kill", genKill, doKill)

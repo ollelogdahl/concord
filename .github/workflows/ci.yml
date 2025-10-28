@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   test:
@@ -26,6 +26,11 @@ jobs:
 
     - name: Test
       run: go test -v -race -coverprofile=coverage.out ./...
+
+    - name: Run fuzzing (5 minutes)
+      run: |
+        # Run each fuzz test for 5 minutes total
+        timeout 6m go run ./test/fuzz/fuzz.go -fuzztime=5m || true
 
     - name: Upload coverage
       uses: codecov/codecov-action@v3

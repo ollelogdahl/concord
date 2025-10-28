@@ -54,10 +54,11 @@ type Fuzzer[S any] struct {
 	ct CrashT
 
 	startTime time.Time
+	maxDuration time.Duration
 	actionTimeout time.Duration
 }
 
-func NewFuzzer[S any](r *rand.Rand) *Fuzzer[S] {
+func NewFuzzer[S any](r *rand.Rand, maxDuration time.Duration) *Fuzzer[S] {
 	return &Fuzzer[S]{
 		logger: log.Default(),
 		actions: make([]actionTypeWrapper[S], 0),
@@ -65,6 +66,7 @@ func NewFuzzer[S any](r *rand.Rand) *Fuzzer[S] {
 		iteration: 0,
 		rng: r,
 		ct: CrashT{},
+		maxDuration: maxDuration,
 		actionTimeout: 10 * time.Second,
 	}
 }
@@ -140,7 +142,10 @@ func (f *Fuzzer[S]) Iteration(s *S) {
 func (f *Fuzzer[S]) Run(s *S) {
 	f.startTime = time.Now()
 	f.ct.startTime = f.startTime
-	for {
+
+	endTime := f.startTime.Add(f.maxDuration)
+
+	for time.Now().Before(endTime) {
 		f.Iteration(s)
 	}
 }
