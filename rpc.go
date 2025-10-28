@@ -3,7 +3,7 @@ package concord
 import (
 	"context"
 
-	"github.com/ollelogdahl/concord/internal/rpc"
+	"github.com/ollelogdahl/concord/rpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"

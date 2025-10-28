@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package concord;
-option go_package = "internal/rpc";
+option go_package = "./rpc";
 
 import "google/protobuf/empty.proto";
 
