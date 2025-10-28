@@ -5,9 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"log/slog"
 	"math/rand/v2"
-	"os"
 	"time"
 
 	"google.golang.org/grpc"
@@ -48,7 +48,7 @@ func newConcord(config Config) *Concord {
 	cc.rangeChangeCallback = config.OnRangeChange
 
 	if config.LogHandler == nil {
-		config.LogHandler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
+		config.LogHandler = slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelDebug})
 	}
 
 	cc.logger = slog.New(config.LogHandler).With(
