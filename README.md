@@ -20,6 +20,7 @@
   <a href="https://pkg.go.dev/github.com/ollelogdahl/concord"><img src="https://pkg.go.dev/badge/github.com/ollelogdahl/concord.svg" alt="Go Reference"></a>
   <a href="https://goreportcard.com/report/github.com/ollelogdahl/concord"><img src="https://goreportcard.com/badge/github.com/ollelogdahl/concord" alt="Go Report Card"></a>
   <a href="https://github.com/ollelogdahl/concord/actions"><img src="https://github.com/ollelogdahl/concord/workflows/CI/badge.svg" alt="CI Status"></a>
+  <a href="https://codecov.io/gh/ollelogdahl/concord"><img alt="Codecov" src="https://img.shields.io/codecov/c/gh/ollelogdahl/concord"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
 </p>
 
