@@ -30,12 +30,14 @@ Concord is a resilient implementation of the core Chord protocol in Go. It provi
 foundation for consistent hashing that's fully resilient to node failures, making it ideal
 for building scalable distributed systems.
 
-The design of this library is based upon the formally proven work by Pamela Zave.
+The design of this library is based upon the formal work by Pamela Zave, which provides a solid
+theoretical foundation for the implementation.
 
 # Features
 
 * **Failure Resilient:** Built-in configurable resilience to node failures ($N$), ensuring the ring remains operational and consistent.
-* **Consistent Hashing Core:** Provides the robust underlying logic for consistent hashing in a distributed environment.
+* **Consistent Hashing Core:** Provides the basic primitives for consistent hashing in a distributed
+  environment.
 * **Range Change Callbacks:** Includes a callback function (`OnRangeChange`) that notifies the
   application when a node becomes responsible for a new range of keys, essential for
   building a DHT.
@@ -68,9 +70,8 @@ func main() {
         Name:     "node1",
         BindAddr: "0.0.0.0:7946",
         AdvAddr:  "node1.example.com:7946",
-        OnRangeChange: func(r concord.Range) error {
+        OnRangeChange: func(r concord.Range) {
             log.Printf("Range changed: %d-%d", r.Start, r.End)
-            return nil
         },
     }
 
@@ -147,11 +148,11 @@ config := concord.Config{
     Name:     "node1",
     BindAddr: "0.0.0.0:7946",
     AdvAddr:  "node1.example.com:7946",
-    OnRangeChange: func(r concord.Range) error {
+    OnRangeChange: func(r concord.Range) {
         log.Printf("Now responsible for range (%d, %d]", r.Start, r.End)
 
         // Migrate data, update local state, etc.
-        return migrateData(r)
+        migrateData(r)
     },
 }
 ```
@@ -220,7 +221,7 @@ config := concord.Config{
 
 ## Prerequisites
 
-- Go 1.25.1 or higher
+- Go 1.24.1 or higher
 - Protocol Buffers compiler and go generators (grpc, protobuf)
 
 ## Building
@@ -248,10 +249,9 @@ go test -race ./...
 ## Fuzzing
 
 Concord includes fuzz tests for checking eventual consistent invariants.
-Can also run with race condition checking using the `-race` flag.
 
 ```
-go run ./test/fuzz/fuzz.go
+go run -race ./test/fuzz/fuzz.go
 ```
 
 ## Test Nodes
