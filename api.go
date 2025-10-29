@@ -68,7 +68,7 @@ type Concord struct {
 	srv     *grpc.Server
 	rpc     *rpcHandler
 	started bool
-	setup bool
+	setup   bool
 
 	clientsLock sync.Mutex
 	clients     map[string]rpcClient

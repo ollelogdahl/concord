@@ -59,7 +59,7 @@ func genSpawn(s *State) []spawnP {
 		return tasks
 	}
 
-	for name, _ := range s.Nodes {
+	for name := range s.Nodes {
 		tasks = append(tasks, spawnP{
 			Name:   fmt.Sprintf("cord%d", s.portIncrementor),
 			ToJoin: name,

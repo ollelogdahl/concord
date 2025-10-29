@@ -86,7 +86,7 @@ func Test2NodeShutdown(t *testing.T) {
 	err = nodes[2].Stop()
 	require.NoError(t, err, "failed to stope node 2")
 
-	ns := []*concord.Concord{nodes[0]};
+	ns := []*concord.Concord{nodes[0]}
 
 	// Assert ring consistency
 	assert.EventuallyWithT(t, func(ct *assert.CollectT) {
