@@ -276,7 +276,6 @@ func (c *Concord) rectify(ctx context.Context, srv Server) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if !c.setup {
-		defer c.lock.RUnlock()
 		return
 	}
 
