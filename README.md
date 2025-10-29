@@ -221,7 +221,7 @@ config := concord.Config{
 
 ## Prerequisites
 
-- Go 1.24.1 or higher
+- Go 1.24.0 or higher
 - Protocol Buffers compiler and go generators (grpc, protobuf)
 
 ## Building
