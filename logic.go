@@ -102,6 +102,9 @@ func (c *Concord) fixFinger(ctx context.Context, idx uint) error {
 func (c *Concord) create() error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+	if c.setup {
+		return fmt.Errorf("cluster already created")
+	}
 
 	c.logger.Info("creating new cluster")
 
@@ -114,6 +117,8 @@ func (c *Concord) create() error {
 	c.updateRange(Range{c.self.Id, c.self.Id})
 
 	c.fillFingerTable(&c.self)
+
+	c.setup = true
 
 	go c.stabilizeTask(c.stabilizeCtx)
 	return nil
@@ -208,6 +213,8 @@ func (c *Concord) join(ctx context.Context, bootstrap string) error {
 
 			c.fillFingerTable(&successor)
 
+			c.setup = true
+
 			go c.stabilizeTask(c.stabilizeCtx)
 
 			c.lock.Unlock()
@@ -219,6 +226,10 @@ func (c *Concord) join(ctx context.Context, bootstrap string) error {
 func (c *Concord) findSuccessor(ctx context.Context, id uint64) (Server, error) {
 	c.lock.RLock()
 	c.logger.Info("finding successor", "id", id, "successors", c.successors)
+	if !c.setup {
+		defer c.lock.RUnlock()
+		return Server{}, fmt.Errorf("not ready")
+	}
 
 	if between(c.self.Id, id, c.successors[0].Id) {
 		defer c.lock.RUnlock()
@@ -264,6 +275,11 @@ func (c *Concord) closestPrecedingNode(id uint64) Server {
 func (c *Concord) rectify(ctx context.Context, srv Server) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+	if !c.setup {
+		defer c.lock.RUnlock()
+		return
+	}
+
 	// c.logger.Debug("rectifying", "srv", srv)
 	if c.predecessor == nil || between(c.predecessor.Id, srv.Id, c.self.Id) {
 		c.predecessor = &srv

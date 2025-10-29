@@ -68,6 +68,7 @@ type Concord struct {
 	srv     *grpc.Server
 	rpc     *rpcHandler
 	started bool
+	setup bool
 
 	clientsLock sync.Mutex
 	clients     map[string]rpcClient
@@ -145,7 +146,10 @@ func (c *Concord) Stop() error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.stabilizeCancel()
+	if c.setup {
+		c.setup = false
+		c.stabilizeCancel()
+	}
 	if c.started {
 		c.srv.Stop()
 		c.started = false
