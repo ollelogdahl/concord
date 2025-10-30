@@ -124,13 +124,6 @@ func (c *Concord) create() error {
 	return nil
 }
 
-func allButLast[T any](slice []T) []T {
-	if len(slice) == 0 {
-		return []T{}
-	}
-	return slice[:len(slice)-1]
-}
-
 func truncate[T any](slice []T, ln int) []T {
 	if ln == 0 {
 		return []T{}
@@ -204,7 +197,7 @@ func (c *Concord) join(ctx context.Context, bootstrap string) error {
 			}
 
 			// insert ourselves into the ring;
-			c.successors = append([]Server{successor}, allButLast(r.Successors)...)
+			c.successors = append([]Server{successor}, truncate(r.Successors, int(c.successorCount)-1)...)
 			c.predecessor = r.Predecessor
 
 			c.logger.Info("joined cluster", "successor", c.successors[0].Name, "predecessor", c.predecessor.Name)
@@ -352,7 +345,7 @@ func (c *Concord) stabilizeFromPredecessor(ctx context.Context, newSucc Server) 
 	r2, err := pcli.GetRing(ctx)
 	if err == nil {
 		c.lock.Lock()
-		c.successors = append([]Server{newSucc}, allButLast(r2.Successors)...)
+		c.successors = append([]Server{newSucc}, truncate(r2.Successors, int(c.successorCount)-1)...)
 		c.lock.Unlock()
 	}
 }
