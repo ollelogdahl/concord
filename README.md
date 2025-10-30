@@ -26,12 +26,16 @@
 
 # Overview
 
-Concord is a resilient implementation of the core Chord protocol in Go. It provides the core
-foundation for consistent hashing that's fully resilient to node failures, making it ideal
-for building scalable distributed systems.
+Concord is a resilient implementation of the core [Chord protocol](https://en.wikipedia.org/wiki/Chord_(peer-to-peer)) in Go.
+The protocol enables distributed key lookup in a peer-to-peer network using consistent hashing, a technique
+for evenly distributing keys across multiple nodes while minimizing reassignments when nodes join and leave.
+Chord allows nodes in this dynamic network to efficiently determine which node is responsible for a given key.
+While Chord is often conflated with its common use case, Distributed Hash Tables, this library
+implements the more general lookup protocol, allowing you to build DHTs or other distributed
+applications on top of it.
 
-The design of this library is based upon the formal work by Pamela Zave, which provides a solid
-theoretical foundation for the implementation.
+This implementation closely follows Pamela Zave's formally verified Chord specification, thereby
+achieving resilience to node failures and maintaining consistency during crash faults.
 
 # Features
 
@@ -45,6 +49,16 @@ theoretical foundation for the implementation.
   64-bit keys).
 * **Structured Logging:** Uses Go's built-in `log/slog` for structured and customizable logging.
 * **gRPC Based:** Uses **gRPC** for internal node-to-node communication.
+
+# What is Chord?
+
+Chord is a peer-to-peer protocol for distributed key lookup using consistent hashing. Consistent
+hashing is a technique for evenly distributing keys across multiple nodes, minimizing the number
+of keys that need to be moved when nodes join and leave the network. Chord allows nodes in this
+dynamic network to efficiently determine which node is responsible for a given key.
+While Chord is often conflated with its common use case, Distributed Hash Tables, this library
+implements the more general lookup protocol, allowing you to build DHTs or other distributed
+applications on top of it.
 
 # Installation
 
