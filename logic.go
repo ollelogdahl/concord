@@ -43,6 +43,10 @@ func newConcord(config Config) *Concord {
 	cc.srv = grpc.NewServer()
 	cc.rpc = &rpcHandler{concord: cc}
 
+	if config.HashBits > 64 {
+		panic("concord hash-space may not be bigger than 64-bit")
+	}
+
 	cc.hashFunc = config.HashFunc
 	cc.hashBits = config.HashBits
 
@@ -74,9 +78,16 @@ func (c *Concord) initFingerTable() {
 	m := uint64(c.hashBits)
 	c.finger = make([]fingerEntry, m)
 	for i := uint64(0); i < m; i++ {
-		// implicit mod 2^64 (thanks to uint64)
+
+		var start uint64
+		if c.hashBits == 64 {
+			start = c.self.Id + (1 << i)
+		} else {
+			start = (c.self.Id + (1 << i)) % (1 << uint64(c.hashBits))
+		}
+
 		c.finger[i] = fingerEntry{
-			Start: c.self.Id + (1 << i),
+			Start: start,
 			Node:  nil,
 		}
 	}
