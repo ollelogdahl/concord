@@ -2,9 +2,11 @@ package concord
 
 import (
 	"context"
+	"crypto/tls"
 
 	"github.com/ollelogdahl/concord/rpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -71,8 +73,24 @@ type rpcClientDispatch struct {
 	hnd *rpcHandler
 }
 
-func newClientGrpc(addr string) (rpcClient, error) {
-	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+func (c *Concord) newClientGrpc(addr string) (rpcClient, error) {
+
+	var creds credentials.TransportCredentials
+	if c.capool == nil {
+		creds = insecure.NewCredentials()
+	} else {
+		tlsConf := &tls.Config{
+			RootCAs:      c.capool,
+			ServerName:   addr,
+			Certificates: []tls.Certificate{c.cert},
+		}
+
+		creds = credentials.NewTLS(tlsConf)
+	}
+
+	conn, err := grpc.NewClient(addr,
+		grpc.WithTransportCredentials(creds),
+	)
 	if err != nil {
 		return &rpcClientGrpc{}, err
 	}

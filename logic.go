@@ -3,14 +3,18 @@ package concord
 import (
 	"context"
 	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/binary"
 	"fmt"
 	"io"
 	"log/slog"
 	"math/rand/v2"
+	"os"
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 const (
@@ -40,7 +44,26 @@ func newConcord(config Config) *Concord {
 	}
 	cc.successorCount = config.SuccessorCount
 
-	cc.srv = grpc.NewServer()
+	var grpcOpts []grpc.ServerOption
+
+	if config.TLSCertFile != "" && config.TLSKeyFile != "" && config.TLSCAFile != "" {
+		cert, capool, err := initCrypto(config.TLSCertFile, config.TLSKeyFile, config.TLSCAFile)
+		if err != nil {
+			panic(err)
+		}
+
+		tlsConf := &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			ClientCAs:    capool,
+		}
+		tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
+
+		cc.cert = cert
+		cc.capool = capool
+		grpcOpts = append(grpcOpts, grpc.Creds(credentials.NewTLS(tlsConf)))
+	}
+
+	cc.srv = grpc.NewServer(grpcOpts...)
 	cc.rpc = &rpcHandler{concord: cc}
 
 	if config.HashBits > 64 {
@@ -68,17 +91,31 @@ func newConcord(config Config) *Concord {
 	cc.clients = make(map[string]rpcClient)
 	cc.stabilizeCtx, cc.stabilizeCancel = context.WithCancel(context.Background())
 
-	// initialize finger table
 	cc.initFingerTable()
 
 	return cc
 }
 
+func initCrypto(certFile string, keyFile string, caFile string) (tls.Certificate, *x509.CertPool, error) {
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return tls.Certificate{}, nil, err
+	}
+
+	caCert, err := os.ReadFile(caFile)
+	if err != nil {
+		return tls.Certificate{}, nil, err
+	}
+	pool := x509.NewCertPool()
+	pool.AppendCertsFromPEM(caCert)
+
+	return cert, pool, nil
+}
+
 func (c *Concord) initFingerTable() {
 	m := uint64(c.hashBits)
 	c.finger = make([]fingerEntry, m)
-	for i := uint64(0); i < m; i++ {
-
+	for i := range m {
 		var start uint64
 		if c.hashBits == 64 {
 			start = c.self.Id + (1 << i)
@@ -95,7 +132,7 @@ func (c *Concord) initFingerTable() {
 
 func (c *Concord) fillFingerTable(n *Server) {
 	m := uint64(c.hashBits)
-	for i := uint64(0); i < m; i++ {
+	for i := range m {
 		c.finger[i].Node = n
 	}
 }
@@ -425,9 +462,9 @@ func (c *Concord) client(addr string) (rpcClient, error) {
 			c.clients[addr] = newClientDispatch(c.rpc)
 			return c.clients[addr], nil
 		} else {
-			cli, err := newClientGrpc(addr)
+			cli, err := c.newClientGrpc(addr)
 			if err != nil {
-				return cli, err
+				return nil, err
 			}
 			c.clients[addr] = cli
 			return cli, nil

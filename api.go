@@ -7,6 +7,8 @@ package concord
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"log/slog"
 	"net"
@@ -28,6 +30,10 @@ type Config struct {
 
 	SuccessorCount uint
 	LogHandler     slog.Handler
+
+	TLSCertFile string
+	TLSKeyFile  string
+	TLSCAFile   string
 }
 
 type Range struct {
@@ -82,6 +88,9 @@ type Concord struct {
 	rangeChangeCallback func(Range)
 
 	logger *slog.Logger
+
+	cert   tls.Certificate
+	capool *x509.CertPool
 }
 
 // Creates a new instance of the Concord service.
