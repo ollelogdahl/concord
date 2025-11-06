@@ -225,9 +225,26 @@ config := concord.Config{
     BindAddr:   "0.0.0.0:7946",
     AdvAddr:    "node1.example.com:7946",
     SuccessorCount: 5,
-    LogHandler: slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-        Level: slog.LevelDebug,
-    }),
+}
+```
+
+## mTLS Encryption
+
+Concord supports secure communication between nodes using Mutual TLS (mTLS). mTLS enforces
+a zero-trust model, requiring both peers to authenticate themselves. This can ensure that
+only trusted, pre-authorized nodes signed by a common Certificate Authority (CA) can
+parttake in the cluster.
+
+To enable mTLS encryption, The following certificates need to be set: `TLSCertFile`, `TLSKeyFile`, and `TLSCAFile`.
+
+```go
+config := concord.Config{
+    Name:       "node1",
+    BindAddr:   "0.0.0.0:7946",
+    AdvAddr:    "node1.example.com:7946",
+    TLSCertFile: "node_1.pem",
+    TLSKeyFile: "node_1_key.pem",
+    TLSCAFile: "ca_pool.pem",
 }
 ```
 
