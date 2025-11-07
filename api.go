@@ -8,7 +8,6 @@ package concord
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"log/slog"
 	"net"
@@ -16,6 +15,11 @@ import (
 
 	"google.golang.org/grpc"
 )
+
+type TLSConfig struct {
+	ServerTLS tls.Config
+	ClientTLS tls.Config
+}
 
 // The main configuration for the Concord service.
 type Config struct {
@@ -31,9 +35,7 @@ type Config struct {
 	SuccessorCount uint
 	LogHandler     slog.Handler
 
-	TLSCertFile string
-	TLSKeyFile  string
-	TLSCAFile   string
+	TLS *TLSConfig
 }
 
 type Range struct {
@@ -76,8 +78,7 @@ type Concord struct {
 	started bool
 	setup   bool
 
-	clientsLock sync.Mutex
-	clients     map[string]rpcClient
+	clients connectionCache
 
 	stabilizeCtx    context.Context
 	stabilizeCancel context.CancelFunc
@@ -89,8 +90,7 @@ type Concord struct {
 
 	logger *slog.Logger
 
-	cert   tls.Certificate
-	capool *x509.CertPool
+	clientTLS *tls.Config
 }
 
 // Creates a new instance of the Concord service.

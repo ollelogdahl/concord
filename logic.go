@@ -46,21 +46,9 @@ func newConcord(config Config) *Concord {
 
 	var grpcOpts []grpc.ServerOption
 
-	if config.TLSCertFile != "" && config.TLSKeyFile != "" && config.TLSCAFile != "" {
-		cert, capool, err := initCrypto(config.TLSCertFile, config.TLSKeyFile, config.TLSCAFile)
-		if err != nil {
-			panic(err)
-		}
-
-		tlsConf := &tls.Config{
-			Certificates: []tls.Certificate{cert},
-			ClientCAs:    capool,
-		}
-		tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
-
-		cc.cert = cert
-		cc.capool = capool
-		grpcOpts = append(grpcOpts, grpc.Creds(credentials.NewTLS(tlsConf)))
+	if config.TLS != nil {
+		grpcOpts = append(grpcOpts, grpc.Creds(credentials.NewTLS(&config.TLS.ServerTLS)))
+		cc.clientTLS = config.TLS.ClientTLS.Clone()
 	}
 
 	cc.srv = grpc.NewServer(grpcOpts...)
@@ -88,7 +76,8 @@ func newConcord(config Config) *Concord {
 		"self_address", cc.self.Address,
 	)
 
-	cc.clients = make(map[string]rpcClient)
+	cc.clients = newConnectionCache(1 * time.Hour)
+
 	cc.stabilizeCtx, cc.stabilizeCancel = context.WithCancel(context.Background())
 
 	cc.initFingerTable()
@@ -453,23 +442,12 @@ func between(a, b, c uint64) bool {
 }
 
 func (c *Concord) client(addr string) (rpcClient, error) {
-	c.clientsLock.Lock()
-	defer c.clientsLock.Unlock()
-	cli, ok := c.clients[addr]
-	if !ok {
-
-		if addr == c.advAddr {
-			c.clients[addr] = newClientDispatch(c.rpc)
-			return c.clients[addr], nil
-		} else {
-			cli, err := c.newClientGrpc(addr)
-			if err != nil {
-				return nil, err
-			}
-			c.clients[addr] = cli
-			return cli, nil
-		}
+	if addr == c.advAddr {
+		return newClientDispatch(c.rpc), nil
 	}
 
-	return cli, nil
+	tlsConfigClone := c.clientTLS.Clone()
+	tlsConfigClone.ServerName = addr
+
+	return c.clients.get(addr, tlsConfigClone)
 }

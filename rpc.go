@@ -3,6 +3,8 @@ package concord
 import (
 	"context"
 	"crypto/tls"
+	"sync"
+	"time"
 
 	"github.com/ollelogdahl/concord/rpc"
 	"google.golang.org/grpc"
@@ -10,6 +12,53 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+type cachedConn struct {
+	rpc       rpcClient
+	createdAt time.Time
+}
+
+type connectionCache struct {
+	mu    sync.RWMutex
+	conns map[string]cachedConn
+	ttl   time.Duration
+}
+
+func newConnectionCache(ttl time.Duration) connectionCache {
+	return connectionCache{
+		conns: make(map[string]cachedConn),
+		ttl:   ttl,
+	}
+}
+
+func (cc *connectionCache) get(addr string, tls *tls.Config) (rpcClient, error) {
+	cc.mu.RLock()
+	cached, exists := cc.conns[addr]
+	cc.mu.RUnlock()
+
+	if exists && time.Since(cached.createdAt) < cc.ttl {
+		return cached.rpc, nil
+	}
+
+	cli, err := newClientGrpc(addr, tls)
+	if err != nil {
+		return nil, err
+	}
+
+	cc.mu.Lock()
+	cc.conns[addr] = cachedConn{rpc: cli, createdAt: time.Now()}
+	cc.mu.Unlock()
+
+	return cli, nil
+}
+
+func (cc *connectionCache) invalidate() {
+	cc.mu.Lock()
+	defer cc.mu.Unlock()
+	for k := range cc.conns {
+		delete(cc.conns, k)
+	}
+}
 
 type rpcHandler struct {
 	rpc.UnimplementedChordServiceServer
@@ -73,19 +122,13 @@ type rpcClientDispatch struct {
 	hnd *rpcHandler
 }
 
-func (c *Concord) newClientGrpc(addr string) (rpcClient, error) {
+func newClientGrpc(addr string, tls *tls.Config) (rpcClient, error) {
 
 	var creds credentials.TransportCredentials
-	if c.capool == nil {
+	if tls == nil {
 		creds = insecure.NewCredentials()
 	} else {
-		tlsConf := &tls.Config{
-			RootCAs:      c.capool,
-			ServerName:   addr,
-			Certificates: []tls.Certificate{c.cert},
-		}
-
-		creds = credentials.NewTLS(tlsConf)
+		creds = credentials.NewTLS(tls)
 	}
 
 	conn, err := grpc.NewClient(addr,
