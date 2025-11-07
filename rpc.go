@@ -13,6 +13,8 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+//go:generate protoc --proto_path=../ --go_out=../ --go-grpc_out=../ ../proto/concord.proto
+
 type cachedConn struct {
 	rpc       rpcClient
 	createdAt time.Time
