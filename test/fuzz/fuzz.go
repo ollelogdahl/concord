@@ -206,7 +206,7 @@ func invEvConsistentRingAndCoverage(t assert.TestingT, s *State) {
 
 const MAX_SIMULATED_NODES = 10
 const MAX_SIMULTANEOUS_KILLS = 4
-const STABILIZE_INTERVAL = 100 * time.Millisecond
+const STABILIZE_INTERVAL = 200 * time.Millisecond
 
 func main() {
 
