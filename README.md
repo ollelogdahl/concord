@@ -230,21 +230,52 @@ config := concord.Config{
 
 ## mTLS Encryption
 
-Concord supports secure communication between nodes using Mutual TLS (mTLS). mTLS enforces
-a zero-trust model, requiring both peers to authenticate themselves. This can ensure that
-only trusted, pre-authorized nodes signed by a common Certificate Authority (CA) can
-parttake in the cluster.
-
-To enable mTLS encryption, The following certificates need to be set: `TLSCertFile`, `TLSKeyFile`, and `TLSCAFile`.
+Concord supports secure communication between nodes using Mutual TLS (mTLS). When configured,
+mTLS provides encryption and authentication, allowing for a zero-trust model where only
+authorized nodes can communicate. This feature is optional and must be explicitly configured.
+Below, static certificates are used.
 
 ```go
+import (
+    "crypto/tls"
+    "crypto/x509"
+    "os"
+)
+
+// Load certificates and CA
+cert, err := tls.LoadX509KeyPair("node_1.pem", "node_1_key.pem")
+if err != nil {
+    log.Fatal(err)
+}
+
+caPool := x509.NewCertPool()
+caPEM, err := os.ReadFile("ca_pool.pem")
+if err != nil {
+    log.Fatal(err)
+}
+caPool.AppendCertsFromPEM(caPEM)
+
+serverTLS := &tls.Config{
+    Certificates: []tls.Certificate{cert},
+    ClientCAs:    caPool,
+    ClientAuth:   tls.RequireAndVerifyClientCert,
+    MinVersion:   tls.VersionTLS13,
+}
+
+clientTLS := &tls.Config{
+    Certificates: []tls.Certificate{cert},
+    RootCAs:      caPool,
+    MinVersion:   tls.VersionTLS13,
+}
+
 config := concord.Config{
-    Name:       "node1",
-    BindAddr:   "0.0.0.0:7946",
-    AdvAddr:    "node1.example.com:7946",
-    TLSCertFile: "node_1.pem",
-    TLSKeyFile: "node_1_key.pem",
-    TLSCAFile: "ca_pool.pem",
+    Name:     "node1",
+    BindAddr: "0.0.0.0:7946",
+    AdvAddr:  "node1.example.com:7946",
+    TLS: &concord.TLSConfig{
+        Server: serverTLS,
+        Client: clientTLS,
+    },
 }
 ```
 
