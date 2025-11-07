@@ -17,10 +17,6 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-const (
-	StabilizeInterval = 3 * time.Second
-)
-
 func newConcord(config Config) *Concord {
 	if config.HashFunc == nil {
 		config.HashFunc = func(data []byte) uint64 {
@@ -28,6 +24,10 @@ func newConcord(config Config) *Concord {
 			return binary.BigEndian.Uint64(h[:8])
 		}
 		config.HashBits = 64
+	}
+
+	if config.StabilizeInterval == 0 {
+		config.StabilizeInterval = 3 * time.Second
 	}
 
 	id := config.HashFunc([]byte(config.Name))
@@ -78,6 +78,7 @@ func newConcord(config Config) *Concord {
 
 	cc.clients = newConnectionCache(1 * time.Hour)
 
+	cc.stabilizeInterval = config.StabilizeInterval
 	cc.stabilizeCtx, cc.stabilizeCancel = context.WithCancel(context.Background())
 
 	cc.initFingerTable()
@@ -403,7 +404,7 @@ func (c *Concord) notifySuccessor(ctx context.Context) error {
 }
 
 func (c *Concord) stabilizeTask(ctx context.Context) {
-	ticker := time.NewTicker(StabilizeInterval)
+	ticker := time.NewTicker(c.stabilizeInterval)
 
 	for {
 		select {
@@ -447,7 +448,9 @@ func (c *Concord) client(addr string) (rpcClient, error) {
 	}
 
 	tlsConfigClone := c.clientTLS.Clone()
-	tlsConfigClone.ServerName = addr
+	if tlsConfigClone != nil {
+		tlsConfigClone.ServerName = addr
+	}
 
 	return c.clients.get(addr, tlsConfigClone)
 }

@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"net"
 	"sync"
+	"time"
 
 	"google.golang.org/grpc"
 )
@@ -34,6 +35,8 @@ type Config struct {
 
 	SuccessorCount uint
 	LogHandler     slog.Handler
+
+	StabilizeInterval time.Duration
 
 	TLS *TLSConfig
 }
@@ -61,12 +64,13 @@ type fingerEntry struct {
 
 // A handle to an instance of the Concord service.
 type Concord struct {
-	self           Server
-	interval       Range
-	successors     []Server
-	predecessor    *Server
-	finger         []fingerEntry
-	successorCount uint
+	self              Server
+	interval          Range
+	successors        []Server
+	predecessor       *Server
+	finger            []fingerEntry
+	successorCount    uint
+	stabilizeInterval time.Duration
 
 	bindAddr string
 	advAddr  string

@@ -114,9 +114,11 @@ func doSpawn(s *State, p spawnP) {
 	baddr, addr := s.nextAddrs()
 
 	cfg := concord.Config{
-		Name:     name,
-		BindAddr: baddr,
-		AdvAddr:  addr,
+		Name:              name,
+		BindAddr:          baddr,
+		AdvAddr:           addr,
+		StabilizeInterval: STABILIZE_INTERVAL,
+		SuccessorCount:    MAX_SIMULTANEOUS_KILLS + 1,
 	}
 
 	instance := concord.New(cfg)
@@ -204,6 +206,7 @@ func invEvConsistentRingAndCoverage(t assert.TestingT, s *State) {
 
 const MAX_SIMULATED_NODES = 10
 const MAX_SIMULTANEOUS_KILLS = 4
+const STABILIZE_INTERVAL = 100 * time.Millisecond
 
 func main() {
 
@@ -234,9 +237,11 @@ func main() {
 		baddr, addr := initialState.nextAddrs()
 
 		cfg := concord.Config{
-			Name:     name,
-			BindAddr: baddr,
-			AdvAddr:  addr,
+			Name:              name,
+			BindAddr:          baddr,
+			AdvAddr:           addr,
+			StabilizeInterval: STABILIZE_INTERVAL,
+			SuccessorCount:    MAX_SIMULTANEOUS_KILLS - 1,
 		}
 
 		instance := concord.New(cfg)
