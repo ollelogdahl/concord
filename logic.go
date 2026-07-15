@@ -29,6 +29,9 @@ func newConcord(config Config) *Concord {
 	if config.StabilizeInterval == 0 {
 		config.StabilizeInterval = 3 * time.Second
 	}
+	if config.RPCTimeout == 0 {
+		config.RPCTimeout = 2 * time.Second
+	}
 
 	id := config.HashFunc([]byte(config.Name))
 
@@ -80,6 +83,7 @@ func newConcord(config Config) *Concord {
 
 	cc.stabilizeInterval = config.StabilizeInterval
 	cc.stabilizeCtx, cc.stabilizeCancel = context.WithCancel(context.Background())
+	cc.rpcTimeout = config.RPCTimeout
 
 	cc.initFingerTable()
 
@@ -285,7 +289,10 @@ func (c *Concord) findSuccessor(ctx context.Context, id uint64) (Server, error) 
 		}
 
 		c.logger.Info("forwarding findSuccessor", "to", contender.Name, "id", id)
-		succ, err := cli.FindSuccessor(ctx, id)
+		tCtx, cancel := c.rpcCtx(ctx)
+		succ, err := cli.FindSuccessor(tCtx, id)
+		cancel()
+
 		if err == nil {
 			return succ, nil
 		}
@@ -332,9 +339,19 @@ func (c *Concord) rectify(ctx context.Context, srv Server) {
 func (c *Concord) stabilizeFromSuccessor(ctx context.Context) {
 	for {
 		c.lock.RLock()
-		cli, _ := c.client(c.successors[0].Address)
+		cli, errClient := c.client(c.successors[0].Address)
 		c.lock.RUnlock()
-		r, err := cli.GetRing(ctx)
+
+		var r ring
+		var err error
+
+		if errClient != nil {
+			err = errClient
+		} else {
+			tCtx, cancel := c.rpcCtx(ctx)
+			r, err = cli.GetRing(tCtx)
+			cancel()
+		}
 
 		c.lock.Lock()
 		if err == nil {
@@ -354,8 +371,8 @@ func (c *Concord) stabilizeFromSuccessor(ctx context.Context) {
 			}
 
 			go c.notifySuccessor(ctx)
-
 			break
+
 		} else {
 			if len(c.successors) == 1 {
 				c.logger.Info("failed to reach all successors; complete isolation")
@@ -369,8 +386,6 @@ func (c *Concord) stabilizeFromSuccessor(ctx context.Context) {
 			}
 			c.lock.Unlock()
 		}
-
-		go c.notifySuccessor(ctx)
 	}
 }
 
@@ -396,7 +411,9 @@ func (c *Concord) notifySuccessor(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
-	err = cli.Notify(ctx, c.self)
+	tCtx, cancel := c.rpcCtx(ctx)
+	defer cancel()
+	err = cli.Notify(tCtx, c.self)
 	if err != nil {
 		return fmt.Errorf("failed to notify: %w", err)
 	}

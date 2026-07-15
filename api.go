@@ -37,6 +37,7 @@ type Config struct {
 	LogHandler     slog.Handler
 
 	StabilizeInterval time.Duration
+	RPCTimeout        time.Duration
 
 	TLS *TLSConfig
 }
@@ -71,6 +72,7 @@ type Concord struct {
 	finger            []fingerEntry
 	successorCount    uint
 	stabilizeInterval time.Duration
+	rpcTimeout        time.Duration
 
 	bindAddr string
 	advAddr  string
@@ -95,6 +97,13 @@ type Concord struct {
 	logger *slog.Logger
 
 	clientTLS *tls.Config
+}
+
+func (c *Concord) rpcCtx(ctx context.Context) (context.Context, context.CancelFunc) {
+	if c.rpcTimeout > 0 {
+		return context.WithTimeout(ctx, c.rpcTimeout)
+	}
+	return ctx, func() {}
 }
 
 // Creates a new instance of the Concord service.
